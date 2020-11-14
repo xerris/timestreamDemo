@@ -1,7 +1,5 @@
 const AWS = require('aws-sdk');
-const S3 = new AWS.S3();
 
-const bucketName = process.env.BUCKET;
 
 exports.main = async function(event, context) {
     try {
@@ -9,10 +7,6 @@ exports.main = async function(event, context) {
 
         if (method === "GET") {
             if (event.path === "/") {
-                const data = await S3.listObjectsV2({ Bucket: bucketName }).promise();
-                var body = {
-                    widgets: data.Contents.map(function(e) { return e.Key })
-                };
                 return {
                     statusCode: 200,
                     headers: {},
