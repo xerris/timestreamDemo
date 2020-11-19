@@ -1,7 +1,6 @@
 const AWS = require('aws-sdk');
 var https = require('https');
 exports.main = async function(event, context) {
-
     try {
         var agent = new https.Agent({
             maxSockets: 5000
@@ -13,39 +12,36 @@ exports.main = async function(event, context) {
                     agent: agent
                 }
         });
-        
         var method = event.httpMethod;
         var body = JSON.parse(event.body);
         if (method === "POST") {
             if (event.path === "/healthInput") {
-                const currentTime = Date.now().toString(); // Unix time in milliseconds
- 
-                const dimensions = [
-                    {'Name': 'region', 'Value': 'us-east-1'},
-                    {'Name': 'az', 'Value': 'az1'},
-                    {'Name': 'hostname', 'Value': 'host1'}
-                ];
-                const memoryUtilization = {
-                    'Dimensions': dimensions,
-                    'MeasureName': 'memory_utilization',
-                    'MeasureValue': body.value,
-                    'MeasureValueType': 'DOUBLE',
-                    'Time': currentTime.toString()
-                };
-             
-                const records = [memoryUtilization];
+                let records = []
+                for(record of body.value){
+                    const dimensions = [
+                        {'Name': 'duration', 'Value': 'hour'}
+                    ];
+                    const memoryUtilization = {
+                        'Dimensions': dimensions,
+                        'MeasureName': 'steps',
+                        'MeasureValue': record.steps.toString(),
+                        'MeasureValueType': 'DOUBLE',
+                        'Time': record.startDate.toString()
+                    };
+                    records.push(memoryUtilization)
+                }
              
                 const params = {
-                    DatabaseName: "NewDBTest",
-                    TableName: "test",
+                    DatabaseName: "StepDatabase",
+                    TableName: "StepTable",
                     Records: records
                 };
-             
+
                 await writeClient.writeRecords(params).promise();
                 return {
                     statusCode: 200,
                     headers: {},
-                    body: JSON.stringify(memoryUtilization)
+                    body: JSON.stringify(records)
                 };
             }
         }

@@ -9,21 +9,11 @@ import SwiftUI
 
 extension Date {
     static var yesterday: Date { return Date().dayBefore }
-    static var tomorrow:  Date { return Date().dayAfter }
     var dayBefore: Date {
-        return Calendar.current.date(byAdding: .day, value: -1, to: noon)!
+        return Calendar.current.date(byAdding: .day, value: -1, to: Date())!
     }
-    var dayAfter: Date {
-        return Calendar.current.date(byAdding: .day, value: 1, to: noon)!
-    }
-    var noon: Date {
-        return Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: self)!
-    }
-    var month: Int {
-        return Calendar.current.component(.month,  from: self)
-    }
-    var isLastDayOfMonth: Bool {
-        return dayAfter.month != month
+    var monthBefore: Date {
+        return Calendar.current.date(byAdding: .day, value: -7, to: Date())!
     }
 }
 
@@ -36,7 +26,7 @@ struct ContentView: View {
     var body: some View {
         VStack{
             HStack{
-                Text("❤️")
+                Text("💪💪")
                     .font(.system(size: 50))
                 Spacer()
 
@@ -63,13 +53,42 @@ struct ContentView: View {
     }
     func start() {
         autorizeHealthKit()
-        activitySteps(Date().dayBefore, endDate: Date(), anchorDate: Date()) { (values, error: NSError?) in
+        getHourlySteps(Date().monthBefore, endDate: Date(), anchorDate: Date()) { (values, error: NSError?) in
             print(values)
+            let url = URL(string: "https://tvoaon0awg.execute-api.us-west-2.amazonaws.com/prod/healthInput")!
+            var request = URLRequest(url: url)
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+            request.httpMethod = "POST"
+            let parameters: [String: Any] = [
+                "value": values
+            ]
+            guard let httpBody = try? JSONSerialization.data(withJSONObject: parameters, options: []) else {
+                return
+            }
+            request.httpBody = httpBody
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                guard let data = data,
+                    let response = response as? HTTPURLResponse,
+                    error == nil else {
+                    print("error", error ?? "Unknown error")
+                    return
+                }
+
+                guard (200 ... 299) ~= response.statusCode else {                    // check for http errors
+                    print("statusCode should be 2xx, but is \(response.statusCode)")
+                    print("response = \(response)")
+                    return
+                }
+
+                let responseString = String(data: data, encoding: .utf8)
+                print("responseString = \(responseString)")
+            }
+
+            task.resume()
         }
         getTodaysSteps { (steps) in
             value = Int(steps)
         }
-    //   startHeartRateQuery(quantityTypeIdentifier: .heartRate)
     }
 
     func autorizeHealthKit() {
@@ -97,8 +116,7 @@ struct ContentView: View {
         healthStore.execute(query)
     }
     
-    func activitySteps(_ startDate:Date, endDate:Date, anchorDate:Date, completion: @escaping (Array<NSObject>, NSError?) -> ()) {
-        print("Jason")
+    func getHourlySteps(_ startDate:Date, endDate:Date, anchorDate:Date, completion: @escaping ([[String: Any]], NSError?) -> ()) {
         let type = HKSampleType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)
         let interval = NSDateComponents()
         interval.hour = 1
@@ -108,7 +126,7 @@ struct ContentView: View {
 
         query.initialResultsHandler = { query, results, error in
           if let myResults = results{
-            var stepsArray: [NSObject] = []
+            var stepsArray: [[String: Any]] = []
             myResults.enumerateStatistics(from: startDate as Date, to: endDate as Date) {
               statistics, stop in
 
@@ -117,10 +135,10 @@ struct ContentView: View {
 
                 let ret =  [
                   "steps": steps,
-                  "startDate" : statistics.startDate,
-                  "endDate": statistics.endDate
+                  "startDate" : round(statistics.startDate.timeIntervalSince1970 * 1000.0),
+                  "endDate": round(statistics.endDate.timeIntervalSince1970 * 1000.0)
                   ] as [String : Any]
-                stepsArray.append(ret as NSObject)
+                stepsArray.append(ret )
               }
             }
             completion(stepsArray, error as NSError?)
