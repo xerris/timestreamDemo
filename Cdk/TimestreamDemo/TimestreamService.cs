@@ -16,7 +16,7 @@ namespace TimestreamDemo
             var handler = new Function(this, "WidgetHandler", new FunctionProps
             {
                 Runtime = Runtime.NODEJS_10_X,
-                Code = Code.FromAsset("resources"),
+                Code = Code.FromAsset("LambdaResources"),
                 Handler = "widgets.main",
             });
             var db = new CfnDatabase(this, "testTimestream", new CfnDatabaseProps
