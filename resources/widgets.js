@@ -6,33 +6,29 @@ exports.main = async function(event, context) {
         var agent = new https.Agent({
             maxSockets: 5000
         });
-        writeClient = new AWS.TimestreamWrite({
+        var writeClient = new AWS.TimestreamWrite({
                 maxRetries: 10,
                 httpOptions: {
                     timeout: 20000,
                     agent: agent
                 }
-            });
-        queryClient = new AWS.TimestreamQuery();
+        });
         
         var method = event.httpMethod;
-
-        if (method === "GET") {
-            if (event.path === "/") {
-                return {
-                    statusCode: 200,
-                    headers: {},
-                    body: "HI"
-                };
-            }
-        }
+        var body = JSON.parse(event.body);
         if (method === "POST") {
-            if (event.path === "/") {
-
+            if (event.path === "/healthInput") {
+                const currentTime = Date.now().toString(); // Unix time in milliseconds
+ 
+                const dimensions = [
+                    {'Name': 'region', 'Value': 'us-east-1'},
+                    {'Name': 'az', 'Value': 'az1'},
+                    {'Name': 'hostname', 'Value': 'host1'}
+                ];
                 const memoryUtilization = {
                     'Dimensions': dimensions,
                     'MeasureName': 'memory_utilization',
-                    'MeasureValue': '40',
+                    'MeasureValue': body.value,
                     'MeasureValueType': 'DOUBLE',
                     'Time': currentTime.toString()
                 };
@@ -53,12 +49,6 @@ exports.main = async function(event, context) {
                 };
             }
         }
-        // We only accept GET for now
-        return {
-            statusCode: 400,
-            headers: {},
-            body: "We only accept GET /"
-        };
     } catch(error) {
         var body = error.stack || JSON.stringify(error, null, 2);
         return {

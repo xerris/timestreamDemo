@@ -34,16 +34,14 @@ namespace TimestreamDemo
                 RestApiName = "Widget Service",
                 Description = "This service services widgets."
             });
+            
+            var postWidgetIntegration = new LambdaIntegration(handler);
+           
+            var widget = api.Root.AddResource("healthInput");
 
-            var getWidgetsIntegration = new LambdaIntegration(handler, new LambdaIntegrationOptions
-            {
-                RequestTemplates = new Dictionary<string, string>
-                {
-                    ["application/json"] = "{ \"statusCode\": \"200\" }"
-                }
-            });
-
-            api.Root.AddMethod("GET", getWidgetsIntegration);
+            // Add new widget to bucket with: POST /{id}
+            
+            widget.AddMethod("POST", postWidgetIntegration);        // POST /{id}
 
         }
     }
